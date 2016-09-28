@@ -5,11 +5,12 @@ import {
     parse,
     print,
     validate,
-    execute,
+    executeReactive,
     formatError,
     specifiedRules,
     ValidationRule,
 } from 'graphql';
+import { Observable } from 'rxjs';
 
 export interface GqlResponse {
     data?: Object;
@@ -56,10 +57,10 @@ const resolvedPromise = Promise.resolve();
 
 function runQuery(options: QueryOptions): Promise<GraphQLResult> {
     // Fiber-aware Promises run their .then callbacks in Fibers.
-    return resolvedPromise.then(() => doRunQuery(options));
+    return resolvedPromise.then(() => runQueryReactive(options).take(1).toPromise());
 }
 
-function doRunQuery(options: QueryOptions): Promise<GraphQLResult> {
+function runQueryReactive(options: QueryOptions): Observable<GraphQLResult> {
     let documentAST: Document;
 
     const logFunction = options.logFunction || function(){ return null; };
@@ -94,7 +95,7 @@ function doRunQuery(options: QueryOptions): Promise<GraphQLResult> {
             logFunction({action: LogAction.parse, step: LogStep.end});
         } catch (syntaxError) {
             logFunction({action: LogAction.parse, step: LogStep.end});
-            return Promise.resolve({ errors: format([syntaxError]) });
+            return Observable.of({ errors: format([syntaxError]) });
         }
 
         // TODO: time this with log function
@@ -107,7 +108,7 @@ function doRunQuery(options: QueryOptions): Promise<GraphQLResult> {
         const validationErrors = validate(options.schema, documentAST, rules);
         logFunction({action: LogAction.validation, step: LogStep.end});
         if (validationErrors.length) {
-            return Promise.resolve({ errors: format(validationErrors) });
+            return Observable.of({ errors: format(validationErrors) });
         }
     } else {
         documentAST = options.query as Document;
@@ -115,14 +116,14 @@ function doRunQuery(options: QueryOptions): Promise<GraphQLResult> {
 
     try {
         logFunction({action: LogAction.execute, step: LogStep.start});
-        return execute(
+        return executeReactive(
             options.schema,
             documentAST,
             options.rootValue,
             options.context,
             options.variables,
             options.operationName
-        ).then(gqlResponse => {
+        ).map(gqlResponse => {
             logFunction({action: LogAction.execute, step: LogStep.end});
             logFunction({action: LogAction.request, step: LogStep.end});
             let response = {
@@ -142,8 +143,8 @@ function doRunQuery(options: QueryOptions): Promise<GraphQLResult> {
     } catch (executionError) {
         logFunction({action: LogAction.execute, step: LogStep.end});
         logFunction({action: LogAction.request, step: LogStep.end});
-        return Promise.resolve({ errors: format([executionError]) });
+        return Observable.of({ errors: format([executionError]) });
     }
 }
 
-export { runQuery };
+export { runQuery, runQueryReactive };

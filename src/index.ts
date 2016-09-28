@@ -1,4 +1,4 @@
-export { runQuery, LogFunction, LogMessage, LogStep, LogAction } from './core/runQuery'
+export { runQuery, runQueryReactive, LogFunction, LogMessage, LogStep, LogAction } from './core/runQuery'
 export { renderGraphiQL} from './modules/renderGraphiQL'
 export { OperationStore } from './modules/operationStore'
 export { apolloExpress, graphiqlExpress } from './integrations/expressApollo'
