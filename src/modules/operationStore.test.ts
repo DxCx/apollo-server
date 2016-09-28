@@ -10,7 +10,7 @@ import {
     GraphQLNonNull,
     print,
     parse,
-} from 'graphql';
+} from 'graphql-rxjs';
 
 import { OperationStore } from './operationStore';
 

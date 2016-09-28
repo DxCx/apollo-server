@@ -37,7 +37,7 @@ import {
   GraphQLString,
   GraphQLError,
   BREAK
-} from 'graphql';
+} from 'graphql-rxjs';
 
 const QueryRootType = new GraphQLObjectType({
   name: 'QueryRoot',

@@ -9,7 +9,7 @@ import {
     formatError,
     specifiedRules,
     ValidationRule,
-} from 'graphql';
+} from 'graphql-rxjs';
 import { Observable } from 'rxjs';
 
 export interface GqlResponse {

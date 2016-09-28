@@ -1,5 +1,5 @@
 import * as koa from 'koa';
-import * as graphql from 'graphql';
+import * as graphql from 'graphql-rxjs';
 import { runQuery } from '../core/runQuery';
 import ApolloOptions from './apolloOptions';
 import * as GraphiQL from '../modules/renderGraphiQL';

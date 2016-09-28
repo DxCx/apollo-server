@@ -1,4 +1,4 @@
-import { GraphQLSchema, ValidationRule } from 'graphql';
+import { GraphQLSchema, ValidationRule } from 'graphql-rxjs';
 import { LogFunction } from '../core/runQuery';
 
 /*

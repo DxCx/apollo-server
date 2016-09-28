@@ -4,7 +4,7 @@ import {
   Document,
   GraphQLSchema,
   OperationDefinition,
-} from 'graphql';
+} from 'graphql-rxjs';
 
 const OPERATION_DEFINITION: string = 'OperationDefinition';
 

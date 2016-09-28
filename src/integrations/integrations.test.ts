@@ -7,7 +7,7 @@ import {
     GraphQLString,
     GraphQLError,
     BREAK,
-} from 'graphql';
+} from 'graphql-rxjs';
 
 // tslint:disable-next-line
 const request = require('supertest-as-promised');

@@ -8,7 +8,7 @@ import {
     GraphQLInt,
     GraphQLNonNull,
     parse,
-} from 'graphql';
+} from 'graphql-rxjs';
 
 import {
   runQuery,

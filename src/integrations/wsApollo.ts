@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import * as graphql from 'graphql';
+import * as graphql from 'graphql-rxjs';
 import * as WebSocket from 'ws';
 import ApolloOptions from './apolloOptions';
 import { runQueryReactive } from '../core/runQuery';

@@ -1,6 +1,6 @@
 import * as Boom from 'boom';
 import { Server, Request, IReply } from 'hapi';
-import { GraphQLResult, formatError } from 'graphql';
+import { GraphQLResult, formatError } from 'graphql-rxjs';
 import * as GraphiQL from '../modules/renderGraphiQL';
 import { runQuery } from '../core/runQuery';
 import ApolloOptions from './apolloOptions';

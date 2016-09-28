@@ -1,5 +1,5 @@
 import * as express from 'express';
-import * as graphql from 'graphql';
+import * as graphql from 'graphql-rxjs';
 import * as url from 'url';
 import { runQuery } from '../core/runQuery';
 
