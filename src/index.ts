@@ -6,3 +6,4 @@ export { apolloHapi, graphiqlHapi, HapiPluginOptions, HapiOptionsFunction } from
 export { apolloKoa, graphiqlKoa } from './integrations/koaApollo'
 export { apolloConnect, graphiqlConnect } from './integrations/connectApollo'
 export { default as ApolloOptions} from './integrations/apolloOptions'
+export { wsApollo } from './integrations/wsApollo'

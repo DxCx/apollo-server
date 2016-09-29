@@ -121,6 +121,35 @@ app.use(router.allowedMethods());
 app.listen(PORT);
 ```
 
+### Websocket
+```js
+import { createServer } from 'http';
+import { Server as WsServer } from 'ws';
+import { wsApollo } from 'apollo-server';
+import * as url from 'url';
+
+let server = createServer();
+const PORT = 3000;
+let wss = new WsServer({ server });
+wss.on("connection", wsApollo((ws) => {
+	const location = url.parse(ws.upgradeReq.url, true);
+
+	// Multiplex ws connections by path.
+	switch ( location.pathname ) {
+		case GRAPHQL_ROUTE:
+			return {
+				context: {},
+				schema: Schema,
+			}
+		default:
+			ws.terminate();
+			return undefined;
+	}
+}));
+
+server.listen(PORT);
+```
+
 ## Options
 
 Apollo Server can be configured with an options object with the the following fields:

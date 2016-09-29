@@ -21,6 +21,7 @@
     "mocha": "registry:dt/mocha#2.2.5+20160720003353",
     "multer": "registry:dt/multer#0.0.0+20160726135055",
     "node": "registry:dt/node#6.0.0+20160801161248",
-    "serve-static": "registry:dt/serve-static#0.0.0+20160606155157"
+    "serve-static": "registry:dt/serve-static#0.0.0+20160606155157",
+    "ws": "registry:dt/ws#0.0.0+20160922171501"
   }
 }
