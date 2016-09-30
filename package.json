@@ -1,6 +1,6 @@
 {
   "name": "apollo-server-rxjs",
-  "version": "0.3.2",
+  "version": "0.3.2-patch.1",
   "description": "Production-ready Node.js GraphQL server for Express, Hapi, Koa",
   "main": "dist/index.js",
   "directories": {
