@@ -28,7 +28,7 @@ export type GraphiQLData = {
 };
 
 // Current latest version of GraphiQL.
-const GRAPHIQL_VERSION = '0.7.8';
+const GRAPHIQL_VERSION = '0.8.0';
 
 // Ensures string values are safe to be used within a <script> tag.
 // TODO: I don't think that's the right escape function
@@ -53,7 +53,7 @@ export function renderGraphiQL(data: GraphiQLData): string {
     Rx.Observable.prototype.fromDiff = rxjsDiffOperator.fromDiff;
     var reqId = 0;
 
-    function graphQLWsFetcher(graphQLParams) {
+    function graphQLFetcher(graphQLParams) {
       var localReqId = reqId++;
       return new Rx.Observable(function (observer) {
         var payload = JSON.stringify(Object.assign({}, graphQLParams, {
@@ -90,19 +90,6 @@ export function renderGraphiQL(data: GraphiQLData): string {
       .catch((e) => {
         return Rx.Observable.of({ errors: [e.message] });
       });
-    }
-
-    // TODO: Temporary Workaround for introspection which rejects observables.
-    // PR to overcome this submitted: graphql/graphiql#172
-    function graphQLFetcher(graphQLParams) {
-      let obs = graphQLWsFetcher(graphQLParams);
-
-      if ( graphQLParams.query &&
-           graphQLParams.query.indexOf("query IntrospectionQuery") !== -1 ) {
-        return obs.take(1).toPromise();
-      }
-
-      return obs;
     }
   ` : `
     function graphQLFetcher(graphQLParams) {
