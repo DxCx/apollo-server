@@ -48,7 +48,7 @@ export function apolloKoa(options: ApolloOptions | KoaApolloOptionsFunction): Ko
       b = [b];
     }
 
-    let responses: Array<graphql.GraphQLResult> = [];
+    let responses: Array<graphql.ExecutionResult> = [];
     for (let requestParams of b) {
       try {
         const query = requestParams.query;

@@ -1,7 +1,7 @@
 import {
     GraphQLSchema,
-    GraphQLResult,
-    Document,
+    ExecutionResult,
+    DocumentNode,
     parse,
     print,
     validate,
@@ -38,7 +38,7 @@ export interface LogFunction {
 
 export interface QueryOptions {
  schema: GraphQLSchema;
- query: string | Document;
+ query: string | DocumentNode;
  rootValue?: any;
  context?: any;
  variables?: { [key: string]: any };
@@ -46,7 +46,7 @@ export interface QueryOptions {
  logFunction?: LogFunction;
  validationRules?: Array<ValidationRule>;
  // WARNING: these extra validation rules are only applied to queries
- // submitted as string, not those submitted as Document!
+ // submitted as string, not those submitted as DocumentNode!
 
  formatError?: Function;
  formatResponse?: Function;
@@ -55,13 +55,13 @@ export interface QueryOptions {
 
 const resolvedPromise = Promise.resolve();
 
-function runQuery(options: QueryOptions): Promise<GraphQLResult> {
+function runQuery(options: QueryOptions): Promise<ExecutionResult> {
     // Fiber-aware Promises run their .then callbacks in Fibers.
     return resolvedPromise.then(() => runQueryReactive(options).take(1).toPromise());
 }
 
-function runQueryReactive(options: QueryOptions): Observable<GraphQLResult> {
-    let documentAST: Document;
+function runQueryReactive(options: QueryOptions): Observable<ExecutionResult> {
+    let documentAST: DocumentNode;
 
     const logFunction = options.logFunction || function(){ return null; };
     const debugDefault = process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test';
@@ -72,7 +72,7 @@ function runQueryReactive(options: QueryOptions): Observable<GraphQLResult> {
     function format(errors: Array<Error>): Array<Error> {
         // TODO: fix types! shouldn't have to cast.
         // the blocker is that the typings aren't right atm:
-        // GraphQLResult returns Array<GraphQLError>, but the formatError function
+        // ExecutionResult returns Array<GraphQLError>, but the formatError function
         // returns Array<GraphQLFormattedError>
         return errors.map(options.formatError || formatError as any) as Array<Error>;
     }
@@ -111,7 +111,7 @@ function runQueryReactive(options: QueryOptions): Observable<GraphQLResult> {
             return Observable.of({ errors: format(validationErrors) });
         }
     } else {
-        documentAST = options.query as Document;
+        documentAST = options.query as DocumentNode;
     }
 
     try {

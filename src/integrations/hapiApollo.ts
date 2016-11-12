@@ -1,10 +1,9 @@
 import * as Boom from 'boom';
 import { Server, Request, IReply } from 'hapi';
-import { GraphQLResult, formatError } from 'graphql-rxjs';
+import { ExecutionResult, formatError } from 'graphql-rxjs';
 import * as GraphiQL from '../modules/renderGraphiQL';
 import { runQuery } from '../core/runQuery';
 import ApolloOptions from './apolloOptions';
-
 
 export interface IRegister {
     (server: Server, options: any, next: any): void;
@@ -127,7 +126,7 @@ async function getApolloOptions(request: Request, reply: IReply): Promise<{}> {
 async function processQuery(graphqlParams, optionsObject: ApolloOptions, reply) {
   const formatErrorFn = optionsObject.formatError || formatError;
 
-  let responses: GraphQLResult[] = [];
+  let responses: ExecutionResult[] = [];
   for (let query of graphqlParams) {
     try {
       let params = {

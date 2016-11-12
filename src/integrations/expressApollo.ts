@@ -69,7 +69,7 @@ export function apolloExpress(options: ApolloOptions | ExpressApolloOptionsFunct
       b = [b];
     }
 
-    let responses: Array<graphql.GraphQLResult> = [];
+    let responses: Array<graphql.ExecutionResult> = [];
     for (let requestParams of b) {
       try {
         const query = requestParams.query;
@@ -148,7 +148,6 @@ export function graphiqlExpress(options: GraphiQL.GraphiQLData) {
     const query = q.query || '';
     const variables = q.variables || '{}';
     const operationName = q.operationName || '';
-
 
     const graphiQLString = GraphiQL.renderGraphiQL({
       endpointURL: options.endpointURL,
