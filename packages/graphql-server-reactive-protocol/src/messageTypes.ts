@@ -30,9 +30,9 @@ export interface RGQLPayloadStart {
 export type RGQLPayloadType = RGQLPayloadError | RGQLPayloadData | RGQLPayloadStart;
 
 export interface RGQLPacketData {
-  id: number; // Per socket increasing number
+  id?: number; // Per socket increasing number
   type: RGQLMessageType;
-  payload: RGQLPayloadType;
+  payload?: RGQLPayloadType;
 }
 
 export interface RGQLPacket {

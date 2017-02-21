@@ -1,5 +1,6 @@
 import {
   ReactiveGraphQLOptions,
+  ReactiveQueryOptions,
   RGQLExecuteFunction ,
   runQueryReactive,
 } from 'graphql-server-reactive-core';
@@ -27,6 +28,13 @@ import {
   RGQLPayloadStart,
 } from './messageTypes';
 
+export interface RequestHooks {
+  onRequestStart?: (requestId: number, queryOptions: ReactiveQueryOptions) => ReactiveQueryOptions | Promise<ReactiveQueryOptions>;
+  onRequestStop?: (requestId: number) => void | Promise<void>;
+  onInit?: (initPayload: any) => boolean | Promise<boolean>;
+  onDisconnect?: () => void | Promise<void>;
+}
+
 export class RequestsManager {
   protected requests: { [key: number]: Subscription } = {};
   protected orphanedResponses: Subscription[] = [];
@@ -34,7 +42,8 @@ export class RequestsManager {
   protected executeReactive: RGQLExecuteFunction;
 
   constructor(protected graphqlOptions: ReactiveGraphQLOptions,
-              requestObservable: IObservable<RGQLPacket>) {
+              requestObservable: IObservable<RGQLPacket>,
+              protected hooks: RequestHooks = {}) {
       this._responseObservable = new Observable((observer) => {
         const kaSub = this._keepAliveObservable().subscribe({
           next: (packet) => observer.next(packet),
@@ -44,20 +53,30 @@ export class RequestsManager {
         const sub = requestObservable.subscribe({
           next: (request) => this._handleRequest(request, observer),
           error: observer.error,
-          complete: observer.complete,
+          complete: () => {
+            this.onDisconnect()
+            .then(() => undefined, (e) => {
+              console.error('onDisconnect failed:', e);
+              return undefined;
+            })
+            .then(observer.complete);
+          },
         });
 
         return () => {
-          /* istanbul ignore else */
-          if ( kaSub ) {
-            kaSub.unsubscribe();
-          }
-          /* istanbul ignore else */
-          if ( sub ) {
-            sub.unsubscribe();
-          }
-
-          this._unsubscribeAll();
+          this._unsubscribeAll()
+          .then(() => {
+            /* istanbul ignore else */
+            if ( kaSub ) {
+              kaSub.unsubscribe();
+            }
+            /* istanbul ignore else */
+            if ( sub ) {
+              sub.unsubscribe();
+            }
+          }, (e) => {
+            console.error('protocol unsubscribe error:', e);
+          });
         };
       });
 
@@ -101,11 +120,9 @@ export class RequestsManager {
     const key: number = request.id;
     switch ( request.type ) {
       case RGQL_MSG_STOP:
-        this._unsubscribe(key);
-        return Observable.empty();
+        return this.stopObservable(request.id);
       case RGQL_MSG_INIT:
-        // TODO: Add callback support.
-        return Observable.of({ type: RGQL_MSG_INIT_SUCCESS });
+        return this.onInit(request.payload);
       case RGQL_MSG_START:
         return this._flattenObservableData(this._executeStart(request),
                                            request.id);
@@ -131,7 +148,7 @@ export class RequestsManager {
       }
     }
 
-    let params = {
+    let params: ReactiveQueryOptions = {
       schema: this.graphqlOptions.schema,
       query: query,
       variables: variables,
@@ -146,11 +163,29 @@ export class RequestsManager {
       executeReactive: this.executeReactive,
     };
 
-    if (this.graphqlOptions.formatParams) {
-      params = this.graphqlOptions.formatParams(params);
-    }
+    return new Observable((observer) => {
+      const subscriptionPromise = this.onRequestStart(request.id, params)
+        .then((options) => {
+          if (this.graphqlOptions.formatParams) {
+            return this.graphqlOptions.formatParams(options);
+          }
 
-    return runQueryReactive(params);
+          return options;
+        })
+        .then((options) => runQueryReactive(options).subscribe(observer))
+        .then(undefined, (e) => {
+            observer.error(e);
+            return undefined;
+        });
+
+      return () => {
+        subscriptionPromise.then((resultSubscription) => {
+          if ( resultSubscription ) {
+            resultSubscription.unsubscribe();
+          }
+        });
+      };
+    });
   }
 
   protected _subscribeResponse(obs: IObservable<RGQLPacketData>, request: RGQLPacket, onMessageObserver: Observer<RGQLPacket>): void {
@@ -228,12 +263,14 @@ export class RequestsManager {
             payload: data,
           });
         },
-        error: observer.error,
+        error: (e) => observer.error(e),
         complete: () => {
-          observer.next({
-            id,
-            type: RGQL_MSG_COMPLETE,
-          });
+          this.onRequestStop(id).then(() => {
+            observer.next({
+              id,
+              type: RGQL_MSG_COMPLETE,
+            });
+          }, (e) => observer.error(e));
         },
       });
     });
@@ -242,7 +279,7 @@ export class RequestsManager {
   protected _flattenObservableErrors(obs: IObservable<RGQLPacketData>, id?: number): IObservable<RGQLPacketData> {
     return new Observable((observer) => {
       return obs.subscribe({
-        next: observer.next,
+        next: (v) => observer.next(v),
         error: (e) => {
           observer.next({
             ...((undefined !== id) ? { id } : {}),
@@ -250,25 +287,97 @@ export class RequestsManager {
             payload: e,
           });
         },
-        complete: observer.complete,
+        complete: () => observer.complete(),
       });
     });
   }
 
-  protected _unsubscribeAll() {
-    Object.keys(this.requests).forEach((k) => {
-      this._unsubscribe(parseInt(k, 10));
+  protected _unsubscribeAll(): Promise<void> {
+    const promises = Object.keys(this.requests).map((k) => {
+      return this._unsubscribe(parseInt(k, 10));
     });
 
-    while ( this.orphanedResponses.length > 0 ) {
-      this.orphanedResponses.pop().unsubscribe();
-    }
+    return Promise.all(promises)
+    .then(() => {
+      while ( this.orphanedResponses.length > 0 ) {
+        this.orphanedResponses.pop().unsubscribe();
+      }
+    });
   }
 
-  protected _unsubscribe(key: number) {
+  protected stopObservable(key: number): IObservable<RGQLPacketData> {
+    return new Observable((observer) => {
+      this._unsubscribe(key)
+        .then(() => observer.complete(), observer.error);
+        return () => { /* noop */ };
+    });
+  }
+
+  protected _unsubscribe(key: number): Promise<void> {
     if ( this.requests.hasOwnProperty(key) ) {
       this.requests[key].unsubscribe();
       delete this.requests[key];
+      return this.onRequestStop(key);
     }
+
+    return Promise.resolve();
+  }
+
+  protected onRequestStart(requestId: number, queryOptions: ReactiveQueryOptions): Promise<ReactiveQueryOptions> {
+    if ( typeof this.hooks.onRequestStart !== 'function' ) {
+      return Promise.resolve(queryOptions);
+    }
+    return Promise.resolve()
+      .then(() => this.hooks.onRequestStart(requestId, queryOptions))
+      .then((newOptions: ReactiveQueryOptions) => {
+        if ( typeof newOptions !== 'object' ) {
+          throw new Error('Invalid params returned from onRequestStart');
+        }
+        return newOptions;
+      });
+  }
+
+  protected onRequestStop(requestId: number): Promise<void> {
+    if ( typeof this.hooks.onRequestStop !== 'function' ) {
+      return Promise.resolve();
+    }
+
+    return Promise.resolve()
+      .then(() => this.hooks.onRequestStop(requestId));
+  }
+
+  protected onInit(initPayload: any): Observable<RGQLPacketData> {
+    const successMsg = { type: RGQL_MSG_INIT_SUCCESS };
+    if ( typeof this.hooks.onInit !== 'function' ) {
+      return Observable.of(successMsg);
+    }
+
+    return new Observable((observer) => {
+      Promise.resolve()
+      .then(() => this.hooks.onInit(initPayload))
+      .then((approved) => {
+        if ( false === approved ) {
+          throw new Error('Prohibited connection!');
+        }
+
+        return successMsg;
+      })
+      .then((result) => {
+        observer.next(result);
+        observer.complete();
+      },
+      (e) => observer.error(e));
+
+      return () => { /* noop */ };
+    });
+  }
+
+  protected onDisconnect(): Promise<void> {
+    if ( typeof this.hooks.onDisconnect !== 'function' ) {
+      return Promise.resolve(undefined);
+    }
+
+    return Promise.resolve()
+      .then(() => this.hooks.onDisconnect());
   }
 }

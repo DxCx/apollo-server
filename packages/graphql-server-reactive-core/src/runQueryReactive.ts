@@ -1,11 +1,11 @@
 import {
-    ExecutionResult,
-    DocumentNode,
-    parse,
-    print,
-    validate,
-    formatError,
-    specifiedRules,
+  ExecutionResult,
+  DocumentNode,
+  parse,
+  print,
+  validate,
+  formatError,
+  specifiedRules,
 } from 'graphql';
 import { LogAction, LogFunction, LogMessage, LogStep, QueryOptions} from 'graphql-server-core';
 import { Observable, IObservable } from 'graphql-server-observable';
